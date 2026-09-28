@@ -1,4 +1,4 @@
-export interface Student {
+interface Student {
   studentId: string;
   firstName: string;
   lastName: string;
@@ -8,15 +8,17 @@ export interface Student {
   enrolledCourses?: string[];
 }
 
-export interface Course {
-  courseCode: string; // ตาม README
-  courseId?: string;  // เพิ่มเผื่อไว้ป้องกัน error จุดอื่น
+interface Course {
+  courseCode: string;
+  courseId?: string;
   courseTitle: string;
   instructors?: string[];
 }
 
-export interface Enrollment {
+interface Enrollment {
   studentId: string;
-  courseCode?: string; // ตาม README
-  courseId?: string;  // เพิ่มเผื่อไว้
+  courseCode?: string;
+  courseId?: string;
 }
+
+export type { Student, Course, Enrollment };

@@ -1,4 +1,25 @@
-import { Student, Course, Enrollment } from "./types";
+export interface Student {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  program: "CPE" | "ISNE";
+  status?: "Active" | "Inactive";
+  courses?: string[];
+  enrolledCourses?: string[];
+}
+
+export interface Course {
+  courseCode: string;
+  courseId?: string;
+  courseTitle: string;
+  instructors?: string[];
+}
+
+export interface Enrollment {
+  studentId: string;
+  courseCode?: string;
+  courseId?: string;
+}
 
 export const students: Student[] = [
   {
