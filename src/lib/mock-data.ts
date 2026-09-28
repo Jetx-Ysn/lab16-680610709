@@ -1,5 +1,3 @@
-import type { Student, Course, Enrollment } from "@/lib/types";
-
 export const students: Student[] = [
   {
     studentId: "650610001",
@@ -47,8 +45,3 @@ export const enrollments: Enrollment[] = [
   { studentId: "650610003", courseId: "269101" },
   { studentId: "650610003", courseId: "261497" },
 ];
-
-export const CURRENT_STUDENT_ID = "650610002";
-export const currentStudent = students.find(
-  (s) => s.studentId === CURRENT_STUDENT_ID,
-)!;

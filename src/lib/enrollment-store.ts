@@ -1,5 +1,5 @@
 import { create } from "zustand";
-
+import { persist } from "zustand/middleware";
 import {
   students as initialStudents,
   courses as initialCourses,
@@ -15,42 +15,74 @@ type EnrollmentStore = {
   enroll: (studentId: string, courseId: string) => void;
   /** Admin ยกเลิกการลงทะเบียนของนักศึกษาคนใดก็ได้ */
   drop: (studentId: string, courseId: string) => void;
+  /** ลงทะเบียนนักศึกษาหลายคนในวิชาเดียวพร้อมกัน */
+  enrollMultiple: (courseId: string, studentIds: string[]) => void;
   /** ลบนักศึกษา พร้อมการลงทะเบียนทั้งหมดของคนนั้น */
   removeStudent: (studentId: string) => void;
   /** ลบวิชาออกจากรายวิชาที่เปิดสอน พร้อม cascade ลบ enrollment ที่อ้างถึงวิชานั้นทั้งหมด */
   removeCourse: (courseId: string) => void;
+  /** อัปเดตข้อมูลรายวิชา (เช่น แก้ไขรายชื่อผู้สอน) */
+  updateCourse: (courseId: string, updatedData: Partial<Course>) => void;
 };
 
-export const useEnrollmentStore = create<EnrollmentStore>((set) => ({
-  students: initialStudents,
-  courses: initialCourses,
-  enrollments: initialEnrollments,
+export const useEnrollmentStore = create<EnrollmentStore>()(
+  persist(
+    (set) => ({
+      students: initialStudents,
+      courses: initialCourses,
+      enrollments: initialEnrollments,
 
-  enroll: (studentId, courseId) =>
-    set((state) => ({
-      enrollments: state.enrollments.some(
-        (e) => e.studentId === studentId && e.courseId === courseId,
-      )
-        ? state.enrollments
-        : [...state.enrollments, { studentId, courseId }],
-    })),
+      enroll: (studentId, courseId) =>
+        set((state) => ({
+          enrollments: state.enrollments.some(
+            (e) => e.studentId === studentId && e.courseId === courseId
+          )
+            ? state.enrollments
+            : [...state.enrollments, { studentId, courseId }],
+        })),
 
-  drop: (studentId, courseId) =>
-    set((state) => ({
-      enrollments: state.enrollments.filter(
-        (e) => !(e.studentId === studentId && e.courseId === courseId),
-      ),
-    })),
+      drop: (studentId, courseId) =>
+        set((state) => ({
+          enrollments: state.enrollments.filter(
+            (e) => !(e.studentId === studentId && e.courseId === courseId)
+          ),
+        })),
 
-  removeStudent: (studentId) =>
-    set((state) => ({
-      students: state.students.filter((s) => s.studentId !== studentId),
-      enrollments: state.enrollments.filter((e) => e.studentId !== studentId),
-    })),
+      // ฟังก์ชันช่วยสำหรับเพิ่มนักศึกษาหลายคนในวิชาเดียว (ใช้ในหน้า Enrollments)
+      enrollMultiple: (courseId, studentIds) =>
+        set((state) => {
+          const currentEnrollments = [...state.enrollments];
+          
+          const filtered = currentEnrollments.filter((e) => e.courseId !== courseId);
+          const newEntries: Enrollment[] = studentIds.map((studentId) => ({
+            studentId,
+            courseId,
+          }));
 
-  removeCourse: (courseId) =>
-    set((state) => ({
-      courses: state.courses.filter((c) => c.courseId !== courseId),
-      enrollments: state.enrollments.filter((e) => e.courseId !== courseId),
-    })),
-}));
+          return { enrollments: [...filtered, ...newEntries] };
+        }),
+
+      removeStudent: (studentId) =>
+        set((state) => ({
+          students: state.students.filter((s) => s.studentId !== studentId),
+          enrollments: state.enrollments.filter((e) => e.studentId !== studentId),
+        })),
+
+      removeCourse: (courseId) =>
+        set((state) => ({
+          courses: state.courses.filter((c) => c.courseId !== courseId),
+          enrollments: state.enrollments.filter((e) => e.courseId !== courseId),
+        })),
+
+      updateCourse: (courseId, updatedData) =>
+        set((state) => ({
+          courses: state.courses.map((c) =>
+            c.courseId === courseId ? { ...c, ...updatedData } : c
+          ),
+        })),
+    }),
+    {
+      name: "lab16-2569-680610709", // LocalStorage Key ตามรหัสนักศึกษาของคุณ
+    }
+  )
+);

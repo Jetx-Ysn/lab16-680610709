@@ -10,6 +10,11 @@ import {
 } from "@/components/ui/sidebar";
 
 export default function RootLayout() {
+
+  const firstName = "Yotsanon";
+  const lastName = "Aimsamaoh";
+  const studentId = "680610709"; 
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -25,8 +30,23 @@ export default function RootLayout() {
         <main className="flex-1 p-4">
           <Outlet />
         </main>
-        <footer className="border-t p-4 text-center text-xs text-muted-foreground"></footer>
+        <footer className="border-t p-4 text-center text-xs text-muted-foreground"><Footer firstName={firstName} lastName={lastName} studentId={studentId} />
+        </footer>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+interface FooterProps {
+  firstName: string;
+  lastName: string;
+  studentId: string;
+}
+
+function Footer({ firstName, lastName, studentId }: FooterProps) {
+  return (
+    <p>
+      จัดทำด้วย {firstName} {lastName} — รหัสนักศึกษา {studentId}
+    </p>
   );
 }
