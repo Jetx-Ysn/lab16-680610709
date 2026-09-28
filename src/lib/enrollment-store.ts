@@ -46,14 +46,15 @@ export const useEnrollmentStore = create<EnrollmentStore>()(
       enrollMultiple: (courseCode, studentIds) =>
         set((state) => {
           const currentEnrollments = [...state.enrollments];
-          const filtered = currentEnrollments.filter(
-            (e) => (e.courseCode || e.courseId) !== courseCode
-          );
-          const newEntries: Enrollment[] = studentIds.map((studentId) => ({
-            studentId,
-            courseCode,
-          }));
-          return { enrollments: [...filtered, ...newEntries] };
+          studentIds.forEach((studentId) => {
+            const exists = currentEnrollments.some(
+              (e) => (e.courseCode || e.courseId) === courseCode && e.studentId === studentId
+            );
+            if (!exists) {
+              currentEnrollments.push({ studentId, courseCode });
+            }
+          });
+          return { enrollments: currentEnrollments };
         }),
 
       removeStudent: (studentId) =>

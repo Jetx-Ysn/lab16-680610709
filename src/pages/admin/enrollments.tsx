@@ -33,51 +33,46 @@ import { useEnrollmentStore } from "@/lib/enrollment-store";
 export default function AdminEnrollmentsPage() {
   const { students, courses, enrollments, enrollMultiple, drop } = useEnrollmentStore();
 
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [selectedCourseCode, setSelectedCourseCode] = useState<string>("");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
 
-  // States สำหรับสลับโหมดค้นหา ("course" หรือ "student")
   const [searchMode, setSearchMode] = useState<"course" | "student">("course");
-  const [filterValue, setFilterValue] = useState("all");
+  const [filterValue, setFilterValue] = useState<string>("all");
 
-  // รายชื่อนักศึกษาที่ยังไม่ได้ลงทะเบียนในวิชาที่เลือก (สำหรับ Dialog)
   const availableStudents = students.filter(
     (s) =>
       !enrollments.some(
-        (e) => e.courseId === selectedCourseId && e.studentId === s.studentId
+        (e) => (e.courseCode || e.courseId) === selectedCourseCode && e.studentId === s.studentId
       )
   );
 
-  // ฟังก์ชันกดบันทึกการลงทะเบียน
   const handleEnroll = () => {
-    if (!selectedCourseId || selectedStudentIds.length === 0) return;
-    enrollMultiple(selectedCourseId, selectedStudentIds);
+    if (!selectedCourseCode || selectedStudentIds.length === 0) return;
+    enrollMultiple(selectedCourseCode, selectedStudentIds);
     setEnrollDialogOpen(false);
   };
 
-  // รีเซ็ตค่าเมื่อปิด Dialog
   const handleDialogOpenChange = (open: boolean) => {
     setEnrollDialogOpen(open);
     if (!open) {
-      setSelectedCourseId("");
+      setSelectedCourseCode("");
       setSelectedStudentIds([]);
     }
   };
 
-  // กรองรายวิชาตามโหมดและค่าที่เลือกใน Dropdown
   const filteredCourses = courses.filter((course) => {
-    // ถ้าอยู่โหมดค้นหานักศึกษา และมีการเลือกเจาะจงนักศึกษา
+    const cCode = course.courseCode || course.courseId || "";
+
     if (searchMode === "student" && filterValue !== "all") {
       const hasStudent = enrollments.some(
-        (e) => e.courseId === course.courseId && e.studentId === filterValue
+        (e) => (e.courseCode || e.courseId) === cCode && e.studentId === filterValue
       );
       if (!hasStudent) return false;
     }
 
-    // ถ้าอยู่โหมดค้นหาวิชา และมีการเลือกเจาะจงวิชา
     if (searchMode === "course" && filterValue !== "all") {
-      if (course.courseId !== filterValue) return false;
+      if (cCode !== filterValue) return false;
     }
 
     return true;
@@ -94,10 +89,12 @@ export default function AdminEnrollmentsPage() {
         </div>
 
         <Dialog open={enrollDialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <PlusCircle className="h-4 w-4" /> ลงทะเบียนให้นักศึกษา
-            </Button>
+          <DialogTrigger>
+            <div className="inline-flex">
+              <Button className="gap-2">
+                <PlusCircle className="h-4 w-4" /> ลงทะเบียนให้นักศึกษา
+              </Button>
+            </div>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[450px]">
             <DialogHeader>
@@ -108,34 +105,37 @@ export default function AdminEnrollmentsPage() {
             </DialogHeader>
 
             <div className="grid gap-4 py-2">
-              {/* 1. เลือกวิชาก่อน */}
               <div className="grid gap-1.5">
                 <Label htmlFor="courseSelect">วิชา</Label>
                 <Select
-                  value={selectedCourseId}
+                  value={selectedCourseCode}
                   onValueChange={(v) => {
-                    setSelectedCourseId(v);
-                    setSelectedStudentIds([]);
+                    if (v) {
+                      setSelectedCourseCode(v);
+                      setSelectedStudentIds([]);
+                    }
                   }}
                 >
                   <SelectTrigger id="courseSelect" className="w-full">
                     <SelectValue placeholder="เลือกวิชา" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
-                    {courses.map((c) => (
-                      <SelectItem key={c.courseId} value={c.courseId}>
-                        {c.courseId} — {c.courseTitle}
-                      </SelectItem>
-                    ))}
+                  <SelectContent>
+                    {courses.map((c) => {
+                      const cCode = c.courseCode || c.courseId || "";
+                      return (
+                        <SelectItem key={cCode} value={cCode}>
+                          {cCode} — {c.courseTitle}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* 2. เลือกนักศึกษาหลายคน */}
               <div className="grid gap-1.5">
                 <Label htmlFor="studentSelect">นักศึกษา</Label>
                 <Select
-                  disabled={!selectedCourseId}
+                  disabled={!selectedCourseCode}
                   value=""
                   onValueChange={(v) => {
                     if (v && !selectedStudentIds.includes(v)) {
@@ -146,7 +146,7 @@ export default function AdminEnrollmentsPage() {
                   <SelectTrigger id="studentSelect" className="w-full">
                     <SelectValue
                       placeholder={
-                        !selectedCourseId
+                        !selectedCourseCode
                           ? "เลือกวิชาก่อน"
                           : availableStudents.length === 0
                           ? "นักศึกษาลงทะเบียนครบทุกวิชาแล้ว"
@@ -154,7 +154,7 @@ export default function AdminEnrollmentsPage() {
                       }
                     />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
+                  <SelectContent>
                     {availableStudents.map((s) => (
                       <SelectItem key={s.studentId} value={s.studentId}>
                         {s.studentId} — {s.firstName} {s.lastName}
@@ -163,7 +163,6 @@ export default function AdminEnrollmentsPage() {
                   </SelectContent>
                 </Select>
 
-                {/* แสดงรายชื่อ นศ. ที่เลือกแบบ Badge */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {selectedStudentIds.map((id) => {
                     const st = students.find((s) => s.studentId === id);
@@ -190,7 +189,7 @@ export default function AdminEnrollmentsPage() {
 
             <DialogFooter>
               <Button
-                disabled={!selectedCourseId || selectedStudentIds.length === 0}
+                disabled={!selectedCourseCode || selectedStudentIds.length === 0}
                 onClick={handleEnroll}
               >
                 ลงทะเบียน ({selectedStudentIds.length} คน)
@@ -200,7 +199,6 @@ export default function AdminEnrollmentsPage() {
         </Dialog>
       </div>
 
-      {/* ปุ่มสลับโหมด ค้นหาวิชา / ค้นหานักศึกษา */}
       <div className="flex items-center gap-2">
         <Button
           variant={searchMode === "course" ? "default" : "outline"}
@@ -226,11 +224,12 @@ export default function AdminEnrollmentsPage() {
         </Button>
       </div>
 
-      {/* Dropdown เปลี่ยนรายการตามโหมดที่เลือก (ถ้าค้นหาวิชาจะแสดงรายชื่อวิชา / ถ้าค้นหานักศึกษาจะแสดงรายชื่อนักศึกษา) */}
       <div>
         <Select
           value={filterValue}
-          onValueChange={setFilterValue}
+          onValueChange={(v) => {
+            if (v) setFilterValue(v);
+          }}
         >
           <SelectTrigger className="w-[260px]">
             <SelectValue placeholder="ทุกคน" />
@@ -238,11 +237,14 @@ export default function AdminEnrollmentsPage() {
           <SelectContent>
             <SelectItem value="all">ทุกคน</SelectItem>
             {searchMode === "course" ? (
-              courses.map((c) => (
-                <SelectItem key={c.courseId} value={c.courseId}>
-                  {c.courseId} {c.courseTitle}
-                </SelectItem>
-              ))
+              courses.map((c) => {
+                const cCode = c.courseCode || c.courseId || "";
+                return (
+                  <SelectItem key={cCode} value={cCode}>
+                    {cCode} {c.courseTitle}
+                  </SelectItem>
+                );
+              })
             ) : (
               students.map((s) => (
                 <SelectItem key={s.studentId} value={s.studentId}>
@@ -254,7 +256,6 @@ export default function AdminEnrollmentsPage() {
         </Select>
       </div>
 
-      {/* ตารางแสดงข้อมูล */}
       <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
@@ -274,13 +275,14 @@ export default function AdminEnrollmentsPage() {
               </TableRow>
             ) : (
               filteredCourses.map((course) => {
+                const cCode = course.courseCode || course.courseId || "";
                 const enrolledInThisCourse = enrollments.filter(
-                  (e) => e.courseId === course.courseId
+                  (e) => (e.courseCode || e.courseId) === cCode
                 );
 
                 return (
-                  <TableRow key={course.courseId}>
-                    <TableCell className="font-medium">{course.courseId}</TableCell>
+                  <TableRow key={cCode}>
+                    <TableCell className="font-medium">{cCode}</TableCell>
                     <TableCell>{course.courseTitle}</TableCell>
                     <TableCell className="text-center font-medium">
                       {enrolledInThisCourse.length}
@@ -299,8 +301,8 @@ export default function AdminEnrollmentsPage() {
                                 {st ? `${st.firstName} ${st.lastName}` : e.studentId}
                                 <button
                                   type="button"
-                                  onClick={() => drop(e.studentId, course.courseId)}
-                                  className="text-muted-foreground hover:text-destructive transition-colors"
+                                  onClick={() => drop(e.studentId, cCode)}
+                                  className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
                                   title="ยกเลิกการลงทะเบียน"
                                 >
                                   <X className="h-3 w-3" />
